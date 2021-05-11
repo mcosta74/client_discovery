@@ -1,26 +1,29 @@
 package main
 
 import (
+	"flag"
 	"log"
 )
 
 const (
-	ProgramName    = "Service Discovery PoC"
-	ProgramVersion = "0.1.0"
-	ServicePort    = 8080
+	programName    = "Service Discovery PoC"
+	programVersion = "0.1.0"
 )
 
 func main() {
-	log.Printf("Welcome to %s v%s", ProgramName, ProgramVersion)
+	log.Printf("Welcome to %s v%s", programName, programVersion)
+
+	servicePort := flag.Int("port", 8080, "listening port for the service")
+	flag.Parse()
 
 	entries := LookupService()
 	log.Printf("Found %d entries", len(entries))
 
 	if len(entries) == 0 {
 		log.Printf("Starting new Service instance...\n")
-		go StartService(ServicePort)
+		go StartService(*servicePort)
 
-		service := RegisterService(ServicePort)
+		service := RegisterService(*servicePort)
 		defer service.Shutdown()
 
 	} else {
