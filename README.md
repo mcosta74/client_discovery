@@ -24,6 +24,14 @@ go run .
 ```
 to build and run the executable in a single step
 
+### Cross-compiling
+To build in for different platform you can use the `GOOS` and `GOARCH` environment variables.
+For instance with 
+```
+GOOS=windows GOARCH=amd64 go build .
+```
+the result is a Windows executable 64bit
+
 ## Usage
 Just run with 
 ```
