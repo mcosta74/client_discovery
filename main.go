@@ -4,6 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 const (
@@ -31,5 +34,15 @@ func main() {
 		go StartClients(entries)
 	}
 
-	select {}
+	done := make(chan error)
+
+	go func() {
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+
+		done <- fmt.Errorf("%s", <-sigs)
+	}()
+
+	<-done
+	fmt.Println("Bye Bye")
 }

@@ -40,7 +40,7 @@ func startClient(entry zeroconf.ServiceEntry) {
 
 	url := fmt.Sprintf("http://%v:%v", entry.AddrIPv4[0].String(), entry.Port)
 	for range ticker.C {
-		go func() {
+		func() {
 			resp, err := http.Get(url)
 			if err != nil {
 				log.Fatal(err)
