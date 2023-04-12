@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/grandcat/zeroconf"
+	"github.com/libp2p/zeroconf/v2"
 )
 
 const (
@@ -38,11 +38,6 @@ func LookupService() []zeroconf.ServiceEntry {
 	log.Println("Looking for service instances....")
 	defer log.Println("Done")
 
-	resolver, err := zeroconf.NewResolver(nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	services := make([]zeroconf.ServiceEntry, 0)
 
 	// Channel to receive discovered service entries
@@ -58,7 +53,7 @@ func LookupService() []zeroconf.ServiceEntry {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	err = resolver.Browse(ctx, ServiceName, "local.", entries)
+	err := zeroconf.Browse(ctx, ServiceName, "local.", entries)
 	if err != nil {
 		log.Fatalln("Failed to browse:", err.Error())
 	}
