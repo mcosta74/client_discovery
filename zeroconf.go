@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"time"
 
 	"github.com/libp2p/zeroconf/v2"
+	"golang.org/x/exp/slog"
 )
 
 const (
@@ -34,9 +36,9 @@ func RegisterService(port int) *zeroconf.Server {
 	return service
 }
 
-func LookupService() []zeroconf.ServiceEntry {
-	log.Println("Looking for service instances....")
-	defer log.Println("Done")
+func LookupService(logger *slog.Logger) []zeroconf.ServiceEntry {
+	logger.Info("Looking for service instances....")
+	defer logger.Info("Done")
 
 	services := make([]zeroconf.ServiceEntry, 0)
 
@@ -45,7 +47,7 @@ func LookupService() []zeroconf.ServiceEntry {
 
 	go func(results <-chan *zeroconf.ServiceEntry) {
 		for entry := range results {
-			log.Println("Found service:", entry.ServiceInstanceName(), entry.Text)
+			log.Println("Found service", "instance_name", entry.ServiceInstanceName(), "meta", entry.Text)
 			services = append(services, *entry)
 		}
 	}(entries)
@@ -55,7 +57,8 @@ func LookupService() []zeroconf.ServiceEntry {
 
 	err := zeroconf.Browse(ctx, ServiceName, "local.", entries)
 	if err != nil {
-		log.Fatalln("Failed to browse:", err.Error())
+		logger.Error("Failed to browse", "err", err)
+		os.Exit(1)
 	}
 
 	<-ctx.Done()
