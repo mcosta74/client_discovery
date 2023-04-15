@@ -1,15 +1,15 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"syscall"
 
 	"golang.org/x/exp/slog"
 
 	"github.com/mcosta74/service_discovery"
+	"github.com/oklog/run"
 )
 
 const (
@@ -22,32 +22,59 @@ func main() {
 
 	logger := setupLogger(config)
 	logger.Info("Started", "name", programName, "version", programVersion)
-	defer logger.Info("Bye Bye")
+	defer logger.Info("Stopped")
 
-	entries := service_discovery.LookupService(logger.With("component", "Lookup"))
-	logger.Info(fmt.Sprintf("Found %d entries", len(entries)))
+	var (
+		sm = service_discovery.NewStateMachine(logger.With("component", "state machine"))
+	)
 
-	if len(entries) == 0 {
-		logger.Info("Starting new Service instance...")
-		go service_discovery.StartService(config.HTTPPort, logger.With("component", "Service"))
-
-		service := service_discovery.RegisterService(config.HTTPPort)
-		defer service.Shutdown()
-
-	} else {
-		go service_discovery.StartClients(entries, logger.With("component", "Client"))
+	var g run.Group
+	{
+		// State Machine
+		ctx, cancel := context.WithCancel(context.Background())
+		g.Add(func() error {
+			return sm.Run(ctx)
+		}, func(err error) {
+			cancel()
+		})
 	}
+	{
+		// Signal Handler
+		ctx := context.Background()
+		g.Add(run.SignalHandler(ctx, syscall.SIGINT, syscall.SIGTERM))
+	}
+	logger.Info("shutting down", "err", g.Run())
 
-	done := make(chan error)
+	// // LOOKUP
 
-	go func() {
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+	// // IF NOT SERVICE FOUND --> START SERVER
 
-		done <- fmt.Errorf("%s", <-sigs)
-	}()
+	// // IF SERVICE FOUND --> START CLIENT
 
-	<-done
+	// entries := service_discovery.LookupService(logger.With("component", "Lookup"))
+	// logger.Info(fmt.Sprintf("Found %d entries", len(entries)))
+
+	// if len(entries) == 0 {
+	// 	logger.Info("Starting new Service instance...")
+	// 	go service_discovery.StartService(config.HTTPPort, logger.With("component", "Service"))
+
+	// 	service := service_discovery.RegisterService(config.HTTPPort)
+	// 	defer service.Shutdown()
+
+	// } else {
+	// 	go service_discovery.StartClients(entries, logger.With("component", "Client"))
+	// }
+
+	// done := make(chan error)
+
+	// go func() {
+	// 	sigs := make(chan os.Signal, 1)
+	// 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
+
+	// 	done <- fmt.Errorf("%s", <-sigs)
+	// }()
+
+	// <-done
 }
 
 func setupLogger(config service_discovery.Config) *slog.Logger {
